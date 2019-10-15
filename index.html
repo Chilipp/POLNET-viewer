@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 
-    <title>EMPD</title>
+    <title>POLNET</title>
 
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
 
@@ -25,6 +25,10 @@
     <link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 
+    <!-- <script src="node_modules/geotiff/dist/geotiff.browserify.js"></script>
+    <script src="node_modules/chroma-js/chroma.min.js"></script>
+    <script src="node_modules/leaflet-canvaslayer-field/dist/leaflet.canvaslayer.field.js"></script> -->
+
     <script src="node_modules/dc.leaflet/dc.leaflet.min.js"></script>
 
     <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css">
@@ -41,11 +45,6 @@
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="sticky-footer-navbar.css" rel="stylesheet">
-
-    <script src="node_modules/json-editor/dist/jsoneditor.min.js"></script>
-
-    <script src="https://www.google.com/recaptcha/api.js?render=6LflGpsUAAAAAKhm3e-A5q30qh1099ZZeF884Vld"></script>
-
 
     <script src="js/utils.js"></script>
     <script src="js/plotting.js"></script>
@@ -77,7 +76,7 @@
               <span class="icon-bar"></span>
               <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="index.html">Eurasian Modern Pollen Database</a>
+            <a class="navbar-brand" href="index.html">POLNET Database</a>
           </div>
           <div class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
@@ -98,7 +97,7 @@
                   </div>
               </noscript>
               </br>
-              <div class="alert alert-danger mobile-alert alert-dismissible" role="alert">
+              <div class="alert alert-danger mobile-alert alert-dismissible" id='mobile-alert' role="alert">
                   <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                   This webpage is not mobile friendly, sorry. You should open it on a larger screen...
               </div>
@@ -106,9 +105,6 @@
       </div>
       <div class="container">
           <div class="row">
-              <div class="alert alert-info alert-dismissible col-xs-12" role="alert" id="version-info">
-                  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-              </div>
               <div class="alert alert-danger alert-dismissible col-xs-12" role="alert" id="development-info">
                   <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                   You are viewing a page under construction. We apologize for the lack of documentation in multiple parts of it.
@@ -123,13 +119,12 @@
 	<br>
     <div class="row">
 
-      <label for="versions">EMPD version:</label>
+      <label for="versions">POLNET data:</label>
       <div class="btn-group" align="left" role="group" aria-label="versions">
-          <a href="" role="button" id="btn-stable" class="btn btn-default">stable</a>
-          <a href="?branch=master" role="button" id="btn-latest" class="btn btn-default">latest</a>
+          <a href="?meta=fossil.tsv" role="button" id="btn-fossil" class="btn btn-default">fossil</a>
+          <a href="?meta=modern-surface-samples.tsv" role="button" id="btn-calibration" class="btn btn-default">modern</a>
+          <a href="?meta=meta.tsv" role="button" id="btn-all" class="btn btn-default">all</a>
           <a href="#" role="button" id="btn-custom" class="btn btn-default disabled">custom</a>
-          <!-- <button type="button" id="btn-latest" class="btn btn-default">latest</button>
-          <button type="button" id="btn-custom" class="btn btn-default disabled">custom</button> -->
       </div>
       <input class="btn pull-right" type="image" id="button_shipping" src="img/shipping.png" title="Deliver cart as tab-separated file" style="height:40px;">
       <select class="pull-right" id="download-type">
@@ -137,43 +132,33 @@
            <option value="metadata">Metadata</option>
       </select>
       <input class="btn pull-right" type="image" id="button_cartdelete" src="img/cartdelete.png" title="Empty download cart" style="height:40px;">
+      <a class="btn pull-right" id="button_share" href="#" target='_blank' title="Copy a permalink to the selection to the clipboard"><img src="img/share.png" style="height:30px;"></a>
       <input class="btn pull-right" type="image" id="button_cartadd" src="img/cartadd.png" title="Add selection on the map to download cart" style="height:40px;">
     </div>
     <br>
         <div class='row' id='editor-row'>
             <ul class="nav nav-tabs" role="tablist" id="meta-tabs">
-                <li role="presentation" aria-controls="formatted-meta-table" class="active"><a href="#formatted-meta-table" role="tab" data-toggle="tab">Metadata</a></li>
+                <li role="presentation" aria-controls="formatted-meta-table"<a href="#formatted-meta-table" role="tab" data-toggle="tab">Metadata</a></li>
 
-                <li role="presentation" aria-controls="meta-table"><a href="#meta-table" role="tab" data-toggle="tab">Full metadata</a></li>
+                <li role="presentation" aria-controls="meta-table" class="active"><a href="#meta-table" role="tab" data-toggle="tab">Full metadata</a></li>
 
                 <li role="presentation"><a href="#filters-tab" aria-controls="filters-tab" role="tab" data-toggle="tab">Filters</a></li>
 
                 <li role="presentation"><a href="#pollen-plot" aria-controls="pollen-plot" role="tab" data-toggle="tab">Pollen diagram</a></li>
 
-                <li role="presentation"><a href="#climate-plot" aria-controls="climate-plot" role="tab" data-toggle="tab">Climate diagram</a></li>
+                <li role="presentation"><a href="#temperature-plot" aria-controls="temperature-plot" role="tab" data-toggle="tab">Temperature reconstruction</a></li>
 
-                <li role="presentation"><a href="#meta-editor" aria-controls="meta-editor" role="tab" data-toggle="tab">Edit Meta data</a></li>
-
-                <li role="presentation"><a href="#meta-submit" aria-controls="meta-submit" role="tab" data-toggle="tab">Submit changes to Github</a></li>
-
-                <li role="presentation"><a href="#report-issue" aria-controls="report-issue" role="tab" data-toggle="tab">Report issues</a></li>
+                <li role="presentation"><a href="#overlays" aria-controls="overlays" role="tab" data-toggle="tab">Overlays</a></li>
             </ul>
             <div class="tab-content">
-                <div role="tabpanel" class="tab-pane active" id="formatted-meta-table">
+                <div role="tabpanel" class="tab-pane" id="formatted-meta-table">
                     <a id="resetFormattedTableLink" class="reset" href="javascript:resetTable();" style="visibility: hidden;">reset</a>
-         	    <br>
+                <br>
                      <div class='scroll'>
                          <table class='span12 table table-hover meta-table' id='formatted-chart-table'>
                              <thead><tr class='header' id='formatted-meta-table-head'>
                                  <th class="th_Sel">Download</th>
                                  <th class="th_Id">Id</th>
-                                 <th class="th_SampleName">Sample name</th>
-                                 <th class="th_SiteName">Site name</th>
-                                 <th class="th_Country">Country</th>
-                                 <th class="th_Elevation">Elevation</th>
-                                 <th class="th_Worker">Analysts</th>
-                                 <th class="th_Publication">Reference</th>
-                                 <th class="th_DOI">DOI</th>
                              </tr></thead>
                          </table>
                      </div>
@@ -184,7 +169,7 @@
                      </div>
                 </div>
 
-                <div role="tabpanel" class="tab-pane" id="meta-table">
+                <div role="tabpanel" class="tab-pane active" id="meta-table">
                     <a id="resetTableLink" class="reset" href="javascript:resetTable();" style="visibility: hidden;">reset</a>
          	    <br>
                      <div class='scroll'>
@@ -205,109 +190,49 @@
 
                 <div role="tabpanel" class="tab-pane" id="filters-tab">
                     <div class="row">
+
+                        <div class="dc-chart col-xs-3" id="origin-chart">
+                           <div class="dc-chart-title">
+                               Data origin
+                               <a class="reset" href="javascript:originChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                           </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-3" id="nsamples-chart">
+                           <div class="dc-chart-title">
+                               Number of samples
+                               <a class="reset" href="javascript:nsamplesChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                           </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-3" id="age-chart">
+                           <div class="dc-chart-title">
+                               Age
+                               <a class="reset" href="javascript:ageChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                           </div>
+                        </div>
+
+                        <div class="col-xs-3 list-group" id="checkbox-filter">
+                            <div class="dc-chart-title">Filter by</div>
+                        </div>
+
+                    </div>
+                    <div class="row">
+
                         <div class="col-xs-2" id="country-filter">
-                          <div>
+                          <div class="dc-chart-title">
                             Country: <a class='reset'
                                href='javascript:countryMenu.filterAll();dc.redrawAll();'
                                style='visibility: hidden;'>reset</a>
                           </div>
                         </div>
 
-                        <div class="col-xs-2" id="samplecontext-filter">
-                          <div>
-                            Sample context: <a class='reset'
-                               href='javascript:sampleContextMenu.filterAll();dc.redrawAll();'
+                        <div class="col-xs-2" id="continent-filter">
+                          <div class="dc-chart-title">
+                            Continent: <a class='reset'
+                               href='javascript:continentMenu.filterAll();dc.redrawAll();'
                                style='visibility: hidden;'>reset</a>
                           </div>
-                        </div>
-
-                        <div class="col-xs-2" id="sampletype-filter">
-                          <div>
-                            Sample type: <a class='reset'
-                               href='javascript:sampleTypeMenu.filterAll();dc.redrawAll();'
-                               style='visibility: hidden;'>reset</a>
-                          </div>
-                        </div>
-
-                        <div class="col-xs-2" id="samplemethod-filter">
-                          <div>
-                            Sample method: <a class='reset'
-                               href='javascript:sampleMethodMenu.filterAll();dc.redrawAll();'
-                               style='visibility: hidden;'>reset</a>
-                          </div>
-                        </div>
-
-                        <div class="col-xs-2" id="contributor-filter">
-                          <div>
-                            Data contributor: <a class='reset'
-                               href='javascript:contributorMenu.filterAll();dc.redrawAll();'
-                               style='visibility: hidden;'>reset</a>
-                          </div>
-                        </div>
-
-                        <div class="col-xs-2" id="worker-filter">
-                          <div>
-                            Responsible person/analyst (worker): <a class='reset'
-                               href='javascript:workerMenu.filterAll();dc.redrawAll();'
-                               style='visibility: hidden;'>reset</a>
-                          </div>
-                        </div>
-
-                    </div>
-                    <div class="row">
-
-                        <div class="dc-chart col-xs-2" id="age-chart">
-                           <div class="dc-chart-title">
-                               Age uncertainty:
-                               <a class="reset" href="javascript:ageChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-                           </div>
-                        </div>
-
-                        <div class="dc-chart col-xs-2" id="location-chart">
-                           <div class="dc-chart-title">
-                               Location uncertainty:
-                               <a class="reset" href="javascript:locationChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-                           </div>
-                        </div>
-
-                        <div class="dc-chart col-xs-3" id="chart-temperature">
-                            <div class="dc-chart-title" id="temperature-title">Mean Annual Temperature</div>
-                            <a class="reset" href="javascript:temperatureChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-                            <br>
-                            <a class="preset" href="javascript:changeTemperatureChart(0);" title="Winter">DJF</a>
-                            <a class="preset" href="javascript:changeTemperatureChart(1);" title="Spring">MAM</a>
-                            <a class="preset" href="javascript:changeTemperatureChart(2);" title="Summer">JJA</a>
-                            <a class="preset" href="javascript:changeTemperatureChart(3);" title="Automn">SON</a>
-                            <a class="preset" href="javascript:changeTemperatureChart(4);" title="Annual">Annual</a>
-                            <span class="reset" style="display: none;"><span class="filter"></span></span>
-                        </div>
-
-                        <div class="dc-chart col-xs-3" id="chart-precip">
-                            <div class="dc-chart-title" id="precip-title">Mean Annual Precipitation</div>
-                            <a class="reset" href="javascript:precipChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-                            <br>
-                            <a class="preset" href="javascript:changePrecipChart(0);" title="Winter">DJF</a>
-                            <a class="preset" href="javascript:changePrecipChart(1);" title="Spring">MAM</a>
-                            <a class="preset" href="javascript:changePrecipChart(2);" title="Summer">JJA</a>
-                            <a class="preset" href="javascript:changePrecipChart(3);" title="Automn">SON</a>
-                            <a class="preset" href="javascript:changePrecipChart(4);" title="Annual">Annual</a>
-                            <span class="reset" style="display: none;"><span class="filter"></span></span>
-                        </div>
-
-                        <div class="dc-chart col-xs-2" id="version-chart">
-                           <div class="dc-chart-title">
-                               EMPD version
-                               <a class="reset" href="javascript:versionChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-                           </div>
-                        </div>
-
-                    </div>
-                    <div class="row">
-
-                        <div class="dc-chart col-xs-3" id="okexcept-filter">
-                           <div class="dc-chart-title">
-                               Accepted failures:
-                           </div>
                         </div>
                     </div>
                 </div>
@@ -323,131 +248,21 @@
                     </div>
                 </div>
 
-                <div role="tabpanel" class="tab-pane" id="climate-plot">
+                <div role="tabpanel" class="tab-pane" id="temperature-plot">
                     <div class="dc-chart col-xs-10">
-                        <div id="climate-diagram" style="width:95%;"></div>
+                        <div id="temperature-diagram" style="width:95%;">
+                        </div>
+                        <div class="alert alert-info" id="recon-info">
+                            Select a site from the map to show it's reconstructed temperature.
+                        </div>
                     </div>
                     <div class="dc-chart col-xs-2">
-                        <div id="climate-diagram-legend"></div>
+                        <div id="temperature-diagram-legend"></div>
                     </div>
                 </div>
 
-                <div role="tabpanel" class="tab-pane" id="meta-editor">
-                    <button type="submit" class="btn btn-default" id='btn-save'>Save changes</button><br>
-                    <div id="editor_holder"></div>
-                </div>
-                <div role="tabpanel" class="tab-pane" id="meta-submit">
-                    <p id="submit-instructions">Thank you for contributing your data!</p>
-                    <p><button type="button" class="btn btn-link" id='download-edits'>Download edited data</button></p>
-                    <form id='submit-form' action="https://empd-admin.herokuapp.com" method="post" target='_blank'>
-                        <div class="row form-group">
-                            <div class="col-md-4 mb-3">
-                                <label for="submitter_firstname">First name*</label>
-                                <input type="text" class="form-control" id="submitter_firstname" name="submitter_firstname" placeholder="Jane" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="submitter_lastname">Last name*</label>
-                                <input type="text" class="form-control" id="submitter_lastname" name="submitter_lastname" placeholder="Doe" required>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="row form-group">
-                            <div class="col-md-4 mb-3">
-                                <label for="submitter_mail">Email* (will not be made public)</label>
-                                <input type="email" class="form-control" id="submitter_mail" name="submitter_mail" placeholder="janedoe@example.com" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="submitter_username">Github Username</label>
-                                <div class="input-group">
-                                    <div class="input-group-addon">@</div>
-                                    <input type="text" class="form-control" id="submitter_username" name="submitter_username" placeholder="JaneDoe">
-                                </div>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="row form-group">
-                            <div class="col-md-8 mb-3">
-                                <label for="commit_msg">Commit message*</label>
-                                <textarea class="form-control" id="commit_msg" name="commit_msg" rows="3" placeholder="Provide a short description about what you did..." required></textarea>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="checkbox">
-                            <label>
-                              <input type="checkbox" required> By submitting your data, you agree to make it publicly available under the Creative Commons Attribution 4.0 International license (CC-BY 4.0) in the <a href="https://github.com/EMPD2/EMPD-data" title="Github repository for the EMPD">EMPD-data repository on Github</a>. Please review the <a href="https://github.com/EMPD2/EMPD-data/blob/master/LICENSE" title="CC BY 4.0 LICENSE of the EMPD-data repository">license file</a> for further information. Furthermore you agree that your first and last name, as well as the Github username (if provided) are made public in the corresponding pull request.*
-                            </label>
-                        </div>
-                        </br>
-                         <button class="btn btn-primary" type="submit" id="btn-submit">Submit</button>
-                    </form>
-                    <div class="alert alert-info" role="alert" id="submit-info">Please be patient, we are just dealing with your data. This may take one or two minutes and you should receive an email.</div>
-                    <div class="alert alert-danger" role="alert" id="submit-failed"></div>
-                    <div class="alert alert-success" role="alert" id="submit-successed"></div>
-                    </div>
-
-                    <div role="tabpanel" class="tab-pane" id="report-issue">
-                        <p id="report-instructions">Thank you for reporting issues! Please fill out this form and click the <i>Submit</i> button. We will then handle your request.</p>
-                        <form id='report-form' action="https://empd-admin.herokuapp.com" method="post" target='_blank'>
-                            <div class="row form-group">
-                                <div class="col-md-4 mb-3">
-                                    <label for="error-source">What is causing the error?</label>
-                                    <select name="error-source" form="report-form" id="error-source">
-                                        <option value="viewer">the Webviewer</option>
-                                        <option value="data">the pollen data</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row form-group">
-                                <div class="col-md-4 mb-3">
-                                    <label for="report_firstname">First name*</label>
-                                    <input type="text" class="form-control" id="report_firstname" name="submitter_firstname" placeholder="Jane" required>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="submitter_lastname">Last name*</label>
-                                    <input type="text" class="form-control" id="submitter_lastname" name="submitter_lastname" placeholder="Doe" required>
-                                </div>
-                            </div>
-                            <br>
-                            <div class="row form-group">
-                                <div class="col-md-4 mb-3">
-                                    <label for="report_mail">Email* (will not be made public)</label>
-                                    <input type="email" class="form-control" id="report_mail" name="submitter_mail" placeholder="janedoe@example.com" required>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="report_username">Github Username</label>
-                                    <div class="input-group">
-                                        <div class="input-group-addon">@</div>
-                                        <input type="text" class="form-control" id="report_username" name="submitter_username" placeholder="JaneDoe">
-                                    </div>
-                                </div>
-                            </div>
-                            <br>
-                            <div class="row form-group">
-                                <div class="col-md-8 mb-3">
-                                    <label for="issue_title">Issue title*</label>
-                                    <input type="text" class="form-control" id="issue_title" name="issue_title" placeholder="Title of the ticket" required>
-                                </div>
-                            </div>
-                            <br>
-                            <div class="row form-group">
-                                <div class="col-md-8 mb-3">
-                                    <label for="issue_msg">Issue message*</label>
-                                    <textarea class="form-control" id="issue_msg" name="issue_msg" rows="3" placeholder="Provide a short description the issue you found..." required></textarea>
-                                </div>
-                            </div>
-                            <br>
-                            <div class="checkbox">
-                                <label>
-                                  <input type="checkbox" required> By submitting this issue, you agree to make it publicly available under the Creative Commons Attribution 4.0 International license (CC-BY 4.0) in the <a href="https://github.com/EMPD2/EMPD-data" title="Github repository for the EMPD">EMPD-data repository on Github</a>. Please review the <a href="https://github.com/EMPD2/EMPD-data/blob/master/LICENSE" title="CC BY 4.0 LICENSE of the EMPD-data repository">license file</a> for further information. Furthermore you agree that your first and last name, as well as the Github username (if provided) are made public in the corresponding pull request.*
-                                </label>
-                            </div>
-                            </br>
-                             <button class="btn btn-primary" type="submit" id="btn-report">Submit</button>
-                        </form>
-                        <div class="alert alert-info" role="alert" id="report-info">Please be patient, we are just dealing with your data. This may take one or two minutes and you should receive an email.</div>
-                        <div class="alert alert-danger" role="alert" id="report-failed"></div>
-                        <div class="alert alert-success" role="alert" id="report-successed"></div>
-                    </div>
+                <div role="tabpanel" class="tab-pane" id="overlays">
+                    <!-- Will be filled by JS -->
                 </div>
             </div>
         </div>
