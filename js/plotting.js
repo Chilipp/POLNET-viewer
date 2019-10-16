@@ -216,7 +216,9 @@ function plotPollen(data, elemId, groupByName="acc_varname") {
         .style("stroke", d => groupColors[d.group] || Unkown_color)
         .style("stroke-dasharray", ("10,3")) // make the stroke dashed
         .style("fill", "none")
-        .attr("transform", (d, i) => `translate(${barWidth * (i + 0.5) + barPadding / 2} , 0)`);
+        .attr("transform", (d, i) => `translate(${barWidth * (i + 0.5) + barPadding / 2} , 0)`)
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide);
 
     var groups = plotGroups
         .map(g => ( {"key": g, "count": groupMap[g].length} ))
@@ -487,4 +489,387 @@ function plotClimateLegend(elemId) {
         .attr("width",(lbbox.width+2*legendPadding))
         .style("fill", "none")
         .style("stroke", "black");
+}
+
+//====================================================================
+
+function plotSamplesPerMill(data, elemId) {
+    //graph code
+    var svg = d3.select("#" + elemId).select("svg"),
+        margin = {top: 20, right: 20, bottom: 30, left: 40},
+        width = datesGraphWidth - margin.left - margin.right,
+        height = datesGraphHeight - margin.top - margin.bottom;
+
+    var x = d3.scaleOrdinal()
+        .range(Array.from(Array(13).keys()).map(
+            function(d) {return d * width / 13;})),
+        y = d3.scaleLinear()
+            .rangeRound([height, 0]);
+
+    var g = svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var barWidth = (width / (data.length + 1));
+    var barPadding = 4;
+    var maxHeight = Math.max.apply(Math, data);
+
+    x.domain(['0k', '1k', '2k', '3k', '4k', '5k', '6k', '7k', '8k', '9k',
+              '10k', '11k', '12k']);
+    y.domain([0, maxHeight]);
+
+    var xAxis = g => g
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x).tickSizeOuter(0))
+        .append("text")
+            .attr("y", margin.bottom)
+            .attr("x", width / 2)
+            .attr("text-anchor", "middle")
+            .text("cal BP");
+
+    var yAxis = g => g
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft(y).ticks(5))
+        .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -30)
+            .attr("x", -margin.left)
+            .attr("text-anchor", "middle")
+            .text("#Samples");
+
+    g.append("g").call(xAxis);
+    g.append("g").call(yAxis);
+
+    g.selectAll(".bar")
+      .data(data)
+      .enter().append("rect")
+        .attr("class", "bar")
+        // .attr("x", function(d) { return x(d); })
+        .attr("y", d => y(d))
+        .attr("width", barWidth - barPadding)
+        .attr("height", d => height - y(d))
+        .style("fill", "steelblue")
+        .attr("transform", function (d, i) {
+            var translate = [barWidth * i + barPadding / 2 , 0];
+            return "translate("+ translate +")";
+        });
+}
+
+
+//====================================================================
+
+function plotPollenDiagram(data, elemId, groupByName="consol_name") {
+
+    if (elemId == "") return;
+
+    var groupMap = {};
+    Object.keys(groupInfo).forEach(function(key) {
+        groupMap[key] = [];
+    });
+
+    var counts = {};
+    // first loop: Create empty config for all taxa
+    var firstAge = data[0].age;
+    var allAges = [];
+    var allSamples = [];
+    var sampleAges = [];
+    data.forEach(function(d) {
+        if (!(allSamples.includes(d.sample_))) {
+            allSamples.push(d.sample_);
+            sampleAges.push({age: d.age, sample: d.sample_})
+        }
+    });
+
+    sampleAges.sort((d1, d2) => d1.age - d2.age);
+    var allAges = sampleAges.map(d => d.age);
+    var allSamples = sampleAges.map(d => d.sample);
+
+    zeros = new Array(sampleAges.length).fill(0);
+
+    data.forEach(function(d){
+        // Use the original_varname here because it is unique (acc_varname is not)
+        var name = d[groupByName] ? d[groupByName] : (
+            d.consol_name ? d.consol_name : (
+                d.acc_varname ? d.acc_varname : d.original_varname));
+        d.name = name;
+        if (!(name in counts)) {
+            counts[name] = {
+                x: zeros.slice(), y: allAges,
+                name: name, count: zeros.slice(),
+                orig: [], recon: [], acc: [], consol: [], group: []};
+            groupMap[d.higher_groupid].push(name);
+        }
+        counts[name].x[allSamples.indexOf(d.sample_)] += d.percentage;
+        counts[name].count[allSamples.indexOf(d.sample_)] += d.count;
+        if (!(counts[name].orig.includes(d.original_varname))) {
+            counts[name].orig.push(d.original_varname);
+        }
+        if (!(counts[name].recon.includes(d.reconname))) {
+            counts[name].recon.push(d.reconname);
+        }
+        if (!(counts[name].consol.includes(d.consol_name))) {
+            counts[name].consol.push(d.consol_name);
+        }
+        if (!(counts[name].acc.includes(d.acc_varname))) {
+            counts[name].acc.push(d.acc_varname);
+        }
+        if (!(counts[name].group.includes(d.higher_groupid))) {
+            counts[name].group.push(d.higher_groupid);
+        }
+
+    })
+
+    var minAge = Math.round(Math.min.apply(null, allAges));
+    var maxAge = Math.round(Math.max.apply(null, allAges));
+
+    // round to closest 50ies
+    minAge -= ((50 - ((minAge < 0 ? -minAge : 50 - minAge) % 50)) % 50);
+    maxAge += ((50 - ((maxAge < 0 ? 50 + maxAge : maxAge) % 50)) % 50);
+
+    Object.values(groupMap).forEach(function(a) {
+        a.sort((a, b) => counts[a].name < counts[b].name ? -1 : 1);
+    });
+
+    // now estimate the width for each subplot
+    var maxX = {};
+    var totalX = 0;
+    var exclude = [];  // taxa that will not be plotted because always smaller than 1%
+    Object.keys(counts).forEach(function(key) {
+        maxX[key] = Math.max.apply(null, counts[key].x);
+        if (maxX[key] < 1.0) {
+            exclude.push(key);
+        } else {
+            maxX[key] = Math.round(Math.max(20., maxX[key]));
+            maxX[key] += (5 - (maxX[key] % 5)) % 5;
+            totalX += maxX[key];
+        }
+    });
+
+    var widths = {};
+    Object.keys(maxX).forEach(function(key) {
+        widths[key] = maxX[key] / totalX;
+    });
+
+    var margin = {top: 180, right: 80, bottom: 60, left: 50},
+        fullWidth = $("#" + elemId).width() - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom;
+
+    // make the plots
+    var plotGroups = ["TRSH", "PALM", "MANG", "LIAN", "SUCC", "HERB", "VACR", "AQUA"];
+
+    Object.keys(groupMap).filter(key => !plotGroups.includes(key)).forEach(
+        function(key) {
+            plotGroups.push(key);
+        }
+    );
+
+    var tip = d3.tip()
+      .attr('class', 'd3-tip')
+      .offset([-10, 0])
+      .html(function(data) {
+        var name = data[0].name;
+        var maxPerc = Math.max.apply(null, counts[name].x);
+        var maxDate = counts[name].y[counts[name].x.indexOf(maxPerc)];
+        var totalCounts = counts[name].count.reduce((a, b) => a + b);
+        var meta = counts[name];
+        return `<strong>${name}</strong><br><br>` +
+               "<table class='tooltip-table'>" +
+               `<tr><td>Original name(s):</td><td>${meta.orig.join(', ')}</td></tr>` +
+               `<tr><td>Accepted name(s):</td><td>${meta.acc.join(', ')}</td></tr>` +
+               `<tr><td>Consolidated name(s):</td><td>${meta.consol.join(', ')}</td></tr>` +
+               `<tr><td>Name(s) for reconstruction:</td><td>${meta.recon.join(', ')}</td></tr>` +
+               `<tr><td>Group: </td><td>${meta.group.join(', ')}</td></tr>` +
+               `<tr><td>max. Percentage: </td><td>${maxPerc.toFixed(2)}% at ${maxDate} yr BP</td></tr>` +
+               `<tr><td>Total Counts: </td><td>${totalCounts}</td></tr></table>`;
+    });
+
+    var first = true;
+    plotGroups.forEach(function(group) {
+        groupMap[group].filter(name => !exclude.includes(name)).forEach(function(name, i) {
+            taxon_data = []
+            counts[name].x.forEach(function(val, i) {
+                taxon_data.push({x: val, y: counts[name].y[i],
+                                 name: counts[name].name});
+            });
+            var width = fullWidth * widths[name];
+
+            var x = d3.scaleLinear().rangeRound([0, width]);
+            var y = d3.scaleLinear().rangeRound([0, height]);
+            x.domain([0, maxX[name]]);
+            y.domain([minAge, maxAge]);
+
+            var ticks = arange(5, parseInt(maxX[name]), 10)
+
+            var svg = d3.select("#" + elemId).append("svg")
+                .attr("width", width + (first ? margin.left : 0))
+                .attr("height", height + margin.top + margin.bottom);
+
+            var g = svg.append("g")
+                .attr("transform", `translate(${first ? margin.left : 0}, ${margin.top})`);
+
+            svg.call(tip);
+
+            g.append("text")
+                .text(counts[name].name)
+                .attr("class", "title")
+                .attr("dy", (width / 2))
+                .attr("dx", "1em")
+                .style("text-anchor", "start")
+                .attr("transform", "rotate(-90)");
+
+            var xAxis = g => g
+                .attr("class", "axis axis--x")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickValues(ticks))
+
+            var yAxis = g => g
+                .attr("class", "axis axis--y")
+                .call(d3.axisLeft(y).ticks(5))
+              .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left + 10)
+                .attr("x", -parseInt(height / 2))
+                .attr("text-anchor", "middle")
+                .text("Year BP");
+
+            g.append("g").call(xAxis);
+
+            g.append("g").call(yAxis);
+
+            var area = d3.area()
+                .x1(d => x(d.x))
+                .x0(d => x(0))
+                .y(d => y(d.y));
+
+            g.append("path")
+                .datum(taxon_data)
+                .attr("class", "area")
+                .style("stroke", "none")
+                .attr("fill", groupColors[group] || Unkown_color)
+                .style("fill-opacity", 1.0)
+                .attr("d", area)
+                .on('mouseover', tip.show)
+                .on('mouseout', tip.hide);
+
+            var exag = d3.line()
+                .x(d => x(d.x * 5))
+                .y(d => y(d.y));
+
+            g.append("path")
+                .datum(taxon_data)
+                .style("stroke", groupColors[group] || Unkown_color)
+                .attr('stroke-width', 2)
+                .style("stroke-dasharray", ("3, 5"))
+                .attr("fill", "none")
+                .attr("d", exag)
+                .on('mouseover', tip.show)
+                .on('mouseout', tip.hide);
+            first = false;
+        });
+    });
+}
+
+function plotPollenLegend(elemId) {
+    var svg = d3.select("#" + elemId).select("svg");
+
+    legendPadding = 10;
+
+    var g = svg.append("g").attr("class", "legend")
+            .style("font-size", "18px")
+            .attr("transform", "translate(25, 40)");
+
+    var groups = ["TRSH", "HERB", "VACR", "AQUA",
+                  "5-times exaggerated"];
+    groups.forEach(function(text, i) {
+        g.append("text")
+            .attr("y", i+"em")
+            .attr("x", "1em")
+    	    .text(groupNames[text] || text);
+        g.append("circle")
+            .attr("cy", i-0.25+"em")
+            .attr("cx", 0)
+            .attr("r", "0.4em")
+            .style("fill", groupColors[text] || "none")
+            .style("stroke", i == groups.length-1 ? groupColors[groups[0]] : "none")
+            .style("stroke-dasharray", i == groups.length-1 ? ("10,3") : "none");
+    })
+
+    var lbbox = g.node().getBBox();
+    g.append("rect")
+        .attr("x",(lbbox.x-legendPadding))
+        .attr("y",(lbbox.y-legendPadding))
+        .attr("height",(lbbox.height+2*legendPadding))
+        .attr("width",(lbbox.width+2*legendPadding))
+        .style("fill", "none")
+        .style("stroke", "black");
+}
+
+//====================================================================
+
+function getNamesMenu(elemId, entity, fossil=true) {
+    var menuDiv = d3.select("#" + elemId + "-title").append("select")
+        .attr("id", elemId + '-name')
+        .on('change', function() {
+            document.getElementById(elemId).innerHTML = "";
+            if (fossil) {
+                var idx = diagramTypeMenu.property("value");
+                if (idx == "all") {
+                    plotPollenDiagram(plottedPollenData[entity], elemId, this.value);
+                } else {
+                    plotPollen(
+                        plottedPollenData[entity].filter(
+                            d => d.sample_ == parseInt(idx)), elemId, this.value);
+                }
+            } else {
+                plotPollen(plottedPollenData[entity], elemId, this.value);
+            }
+        });
+
+    menuDiv.append("option")
+        .attr("value", "original_varname")
+        .html("Original names");
+
+    menuDiv.append("option")
+        .attr("value", "acc_varname")
+        .html("Accepted names");
+
+    menuDiv.append("option")
+        .attr("value", "consol_name")
+        .html("Consolidated names")
+        .attr("selected", true);
+
+    // reconstruction names not yet set
+    // menuDiv.append("option")
+    //     .attr("value", "reconname")
+    //     .html("Reconstruction names");
+
+    if (fossil) {
+        var diagramTypeMenu = d3.select("#" + elemId + "-title").append("select")
+            .attr("id", elemId + '-type')
+            .on('change', function() {
+                document.getElementById(elemId).innerHTML = "";
+                if (this.value == "all") {
+                    plotPollenDiagram(plottedPollenData[entity], elemId,
+                        menuDiv.property("value"));
+                } else {
+                    plotPollen(plottedPollenData[entity].filter(
+                            d => d.sample_ == parseInt(this.value)), elemId);
+
+                }
+            });
+
+        diagramTypeMenu.append("option")
+            .attr("value", "all")
+            .attr("selected", true)
+            .html("All data");
+
+        var ages = plottedPollenData[entity].map(d => d.age);
+        ages.sort((a, b) => a - b);
+
+        ages.forEach(function(a, i) {
+            diagramTypeMenu.append("option")
+                .attr("value", i + 1)
+                .html(`Sample ${i+1} at ${a} cal BP`);
+        })
+    }
 }

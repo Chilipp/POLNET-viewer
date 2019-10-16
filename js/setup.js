@@ -276,7 +276,7 @@ $(document).ready(function() {
         // plot the pollen and climate data on popupopen
         theMap.on('popupopen', function(event) {
             Id = event.popup._source.key[2] - 1;
-            // displaySampleData(data[Id]);
+            displaySampleData(data[Id]);
         })
 
         theMap.on('popupclose', function(event) {
@@ -405,49 +405,49 @@ function displaySampleData(data) {
     displayedData = data;
     highlightDisplayed();
 
-    var activeTab = $('#climate-plot').hasClass("active") ? "climate-plot" : "pollen-plot";
+    var activeTab = "pollen-plot";
     removeUnlocked();
-    document.getElementById("climate-diagram-legend").innerHTML = "<svg/>";
     document.getElementById("pollen-diagram-legend").innerHTML = "<svg/>";
 
-    // plot the climate data
-    if (typeof(data.Precipitation) !== 'undefined') {
-        var elemId = lockableElement("climate-diagram", data.SampleName, data.SiteName);
-        $('#meta-tabs a[href="#climate-plot"]').tab('show');
-        plotClimate(data, elemId);
-        plotClimateLegend("climate-diagram-legend");
-    }
+    if (!data.ismodern) plotSamplesPerMill(data.sample_dates, "datesgraph-" + data.Id);
 
-    // load and plot the pollen data
-    d3.tsv(
-        repo_url + 'samples/' + data.SampleName + '.tsv',
+    var promises = [];
+
+    // Add pollen data
+    promises.push(d3.tsv(
+        repo_url + 'entities/' + data.e_ + '.tsv',
         function(d) {
             d.higher_groupid = groupInfo[d.groupid].higher_groupid;
-            d.samplename = data.SampleName;
             d.percentage = d.percentage == '' ? NaN : +d.percentage;
             d.count = d.count == '' ? NaN : +d.count;
+            d.e_ = data.e_;
+            d.age = (d.age == '' || d.age.toLowerCase() == 'nan') ? NaN : +d.age;
             return d
-        }).then(function(taxa_data) {
+        }).catch(function(reason){console.log(`No pollen data available for ${data.e_}: ${reason}`); return [];})
+    );
 
-            taxa_data = taxa_data.filter(d => !isNaN(d.percentage))
-
-            var elemId = lockableElement("pollen-diagram", data.SampleName, data.SiteName);
+    Promise.all(promises).then(function(entityData) {
+        var pollenData = entityData.pop();
+        if (pollenData.length > 0) {
+            var elemId = lockableElement("pollen-diagram", data.e_, data.sitename);
             $('#meta-tabs a[href="#pollen-plot"]').tab('show');
-            plotPollen(taxa_data, elemId);
+            if (displayedData.nsamples12k == 1) {
+                pollenData = pollenData.filter(d => !isNaN(d.percentage));
+                plotPollen(pollenData, elemId);
+            } else {
+                pollenData = pollenData.filter(d => !isNaN(d.percentage) && !isNaN(d.age));
+                plotPollenDiagram(pollenData, elemId);
+            }
+            plottedPollenData[data.e_] = pollenData;
+            getNamesMenu(elemId, data.e_);
             plotPollenLegend('pollen-diagram-legend');
+        }
 
-            $('#meta-tabs a[href="#' + activeTab + '"]').tab('show');
-
-            plottedPollenData[data.SampleName] = taxa_data;
-        });
-
+        $('#meta-tabs a[href="#' + activeTab + '"]').tab('show');
+    })
 };
 
 // ==================================================================
-
-function jsonCopy(src) {
-  return JSON.parse(JSON.stringify(src));
-}
 
 function getPopupContent(data) {
     /**
