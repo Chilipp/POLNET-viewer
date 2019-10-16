@@ -223,3 +223,8 @@ function jsonCopy(src) {
 	// Make a copy of a javascript object
     return JSON.parse(JSON.stringify(src));
 }
+
+//====================================================================
+function arange(start, stop, step = 1) {
+    return Array(Math.ceil((stop - start) / step)).fill(start).map((x, y) => x + y * step);
+}
