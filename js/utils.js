@@ -228,3 +228,8 @@ function jsonCopy(src) {
 function arange(start, stop, step = 1) {
     return Array(Math.ceil((stop - start) / step)).fill(start).map((x, y) => x + y * step);
 }
+
+//====================================================================
+function waitFor(callback) {
+    return callback() ? true : setTimeout(function() { return waitFor(callback); }, 500);
+}

@@ -88,13 +88,13 @@ function plotPollen(data, elemId, groupByName="acc_varname") {
                 orig: [], recon: [], acc: [], consol: [], group: []};
             groupMap[d.higher_groupid].push(name);
         }
-        counts[name].percentage += d.percentage;
+        counts[name].percentage += d[percName];
         counts[name].count += d.count;
         if (!(counts[name].orig.includes(d.original_varname))) {
             counts[name].orig.push(d.original_varname);
         }
-        if (!(counts[name].recon.includes(d.reconname))) {
-            counts[name].recon.push(d.reconname);
+        if (!(counts[name].recon.includes(d.recon_name))) {
+            counts[name].recon.push(d.recon_name);
         }
         if (!(counts[name].consol.includes(d.consol_name))) {
             counts[name].consol.push(d.consol_name);
@@ -586,6 +586,8 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
 
     zeros = new Array(sampleAges.length).fill(0);
 
+    var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
+
     data.forEach(function(d){
         // Use the original_varname here because it is unique (acc_varname is not)
         var name = d[groupByName] ? d[groupByName] : (
@@ -599,13 +601,13 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
                 orig: [], recon: [], acc: [], consol: [], group: []};
             groupMap[d.higher_groupid].push(name);
         }
-        counts[name].x[allSamples.indexOf(d.sample_)] += d.percentage;
+        counts[name].x[allSamples.indexOf(d.sample_)] += d[percName];
         counts[name].count[allSamples.indexOf(d.sample_)] += d.count;
         if (!(counts[name].orig.includes(d.original_varname))) {
             counts[name].orig.push(d.original_varname);
         }
-        if (!(counts[name].recon.includes(d.reconname))) {
-            counts[name].recon.push(d.reconname);
+        if (!(counts[name].recon.includes(d.recon_name))) {
+            counts[name].recon.push(d.recon_name);
         }
         if (!(counts[name].consol.includes(d.consol_name))) {
             counts[name].consol.push(d.consol_name);
@@ -838,10 +840,9 @@ function getNamesMenu(elemId, entity, fossil=true) {
         .html("Consolidated names")
         .attr("selected", true);
 
-    // reconstruction names not yet set
-    // menuDiv.append("option")
-    //     .attr("value", "reconname")
-    //     .html("Reconstruction names");
+    menuDiv.append("option")
+        .attr("value", "recon_name")
+        .html("Reconstruction names");
 
     if (fossil) {
         var diagramTypeMenu = d3.select("#" + elemId + "-title").append("select")
@@ -872,4 +873,228 @@ function getNamesMenu(elemId, entity, fossil=true) {
                 .html(`Sample ${i+1} at ${a} cal BP`);
         })
     }
+}
+
+
+//====================================================================
+
+
+function isVisible(variable, seriesName, what="mean") {
+    var config = visibleReconstructions[variable][seriesName];
+    return config.mean && config[what]
+}
+
+
+function getUncertaintyName(variable, seriesName, what="lower") {
+    return $(`#recon-${variable}-config-${seriesName}-${what}`).attr("value")
+}
+
+
+function resolveReconstruction(variable, seriesName, data, config) {
+    var ret = {}
+    ret.y = +data[config.name];
+    ret.x = +data[config.index];
+    ret.uncertainties = [];
+    if (isVisible(variable, seriesName, "lower") |
+            isVisible(variable, seriesName, "upper")) {
+        if (isVisible(variable, seriesName, "lower")) {
+            var uncName = getUncertaintyName(variable, seriesName, "lower");
+            if (config.upper.includes(uncName)) {
+                ret.uncertainties.push(ret.y - (+data[uncName]))
+            } else {
+                ret.uncertainties.push(+data[uncName])
+            }
+        } else {
+            ret.uncertainties.push(ret.y)
+        }
+        if (isVisible(variable, seriesName, "upper")) {
+            var uncName = getUncertaintyName(variable, seriesName, "upper");
+            if (config.lower.includes(uncName)) {
+                ret.uncertainties.push(ret.y + (+data[uncName]))
+            } else {
+                ret.uncertainties.push(+data[uncName])
+            }
+        } else {
+            ret.uncertainties.push(ret.y)
+        }
+    }
+    return ret
+}
+
+function plotReconstructions(variable, recons, elemId) {
+
+    // make the plot
+    var margin = {top: 5, right: 80, bottom: 70, left: 70},
+        width = $("#" + elemId).width() - margin.left - margin.right,
+        height = 300 - margin.top - margin.bottom;
+
+    var svg = d3.select("#" + elemId).append("svg")
+        .attr("width", width + margin.left)
+        .attr("height", height + margin.top + margin.bottom);
+
+    var g = svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var domains = getDomains(variable, recons);
+
+    var x = d3.scaleLinear().rangeRound([0, width]).domain(domains.x);
+    var y = d3.scaleLinear().rangeRound([height, 0]).domain(domains.y);
+
+    var xAxis = g => g
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickSizeOuter(0))
+        .append("text")
+            .attr("y", margin.bottom / 2)
+            .attr("x", width / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text(recons.index_desc);
+
+    var yAxis = g => g
+        .call(d3.axisLeft(y).ticks(5))
+        .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -margin.left / 2)
+            .attr("x", -parseInt(height / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text(`${recons.desc} [${recons.units}]`);
+
+    g.append("g")
+        .attr("class", "x axis")
+        .call(xAxis);
+
+    g.append("g")
+        .attr("class", "y axis")
+        .call(yAxis);
+
+    var colors = [];
+    var gs = [];
+
+    recons.plotComponents = {
+        svg: g,
+        xAxis: xAxis,
+        yAxis: yAxis,
+        x: x,
+        y: y
+    };
+
+    Object.keys(recons.series)
+        .filter(seriesName => isVisible(variable, seriesName))
+        .forEach(function(seriesName) {
+
+            var seriesData = recons.series[seriesName]
+
+            seriesData.line = d3.line()
+                .x(d => x(d.x))
+                .y(d => y(d.y));
+
+            seriesData.uncertainty_plot = d3.area()
+                .x(d => x(d.x))
+                .y0(d => y(d.uncertainties[0]))
+                .y1(d => y(d.uncertainties[1]));
+
+            plotLine(seriesData, g)
+
+    })
+}
+
+function plotLine(seriesData, g) {
+    var seriesG = g.append("g").datum(seriesData.plot_data);
+
+    seriesG.append("path")
+        .style("stroke", seriesData.color)
+        .style("fill", "none")
+        .attr('stroke-width', 2)
+        .attr("d", seriesData.line);
+
+    var plotUncertanties = (seriesData.plot_data[0].uncertainties.length > 0);
+
+    if (plotUncertanties) {
+
+        seriesG.append('path')
+            .attr("class", "area")
+            .style("stroke", "none")
+            .attr("fill", seriesData.color)
+            .style("fill-opacity", 0.25)
+            .attr('d', seriesData.uncertainty_plot);
+    }
+    seriesData.svg = seriesG;
+}
+
+
+function getDomains(variable, recons) {
+    var allAges = [];
+    var allRanges = [];
+
+    Object.keys(recons.series).forEach(function(s) {
+        var data = recons.series[s];
+        data.plot_data = [];
+        data.data.forEach(function(d) {
+            var plot_data = resolveReconstruction(variable, s, d, data);
+            data.plot_data.push(plot_data);
+            allAges.push(plot_data.x);
+            allRanges.push(plot_data.y);
+            allRanges.push.apply(allRanges, plot_data.uncertainties);
+        })
+    })
+
+    // select min and max age for the plot
+    var minAge = Math.round(Math.min.apply(null, allAges));
+    var maxAge = Math.round(Math.max.apply(null, allAges));
+
+    // round to closest 50ies
+    minAge -= ((50 - ((minAge < 0 ? -minAge : 50 - minAge) % 50)) % 50);
+    maxAge += ((50 - ((maxAge < 0 ? 50 + maxAge : maxAge) % 50)) % 50);
+
+    // select min and max climate for the plot
+    var minTemp = Math.round(Math.min.apply(null, allRanges));
+    var maxTemp = Math.round(Math.max.apply(null, allRanges));
+
+    // round to closest 5
+    minTemp -= ((5 - ((minTemp < 0 ? -minTemp : 5 - minTemp) % 5)) % 5);
+    maxTemp += ((5 - ((maxTemp < 0 ? 5 + maxTemp : maxTemp) % 5)) % 5);
+
+    return {x: [minAge, maxAge], y: [minTemp, maxTemp]}
+}
+
+
+function updateLine(variable, seriesName, action) {
+    var config = visibleReconstructions[variable][seriesName];
+
+    if (action == "toggle-lower") config.lower = !config.lower;
+    if (action == "toggle-upper") config.upper = !config.upper;
+
+    if (action == "toggle") config.mean = !config.mean;
+    Object.keys(plottedReconstructions).forEach(function (entity) {
+
+        if (document.getElementById(`recon-diagram-${entity}-title`) != null) {
+
+            var variableConf = plottedReconstructions[entity][variable];
+            var components = variableConf.plotComponents;
+
+            domains = getDomains(variable, variableConf);
+
+            components.x.domain(domains.x);
+            components.y.domain(domains.y);
+            components.svg.select(".x.axis")
+                .call(components.xAxis);
+            components.svg.select(".y.axis")
+                .call(components.yAxis);
+
+
+            // replot all lines because the limits might have changed
+            Object.keys(variableConf.series).forEach(function (seriesName) {
+                var seriesData = variableConf.series[seriesName];
+                if (typeof(seriesData.svg) !== "undefined") {
+                    seriesData.svg.remove();
+                    delete seriesData.svg;
+                }
+
+                if (isVisible(variable, seriesName)) {
+                    plotLine(seriesData, variableConf.plotComponents.svg);
+                }
+            })
+        }
+    })
 }

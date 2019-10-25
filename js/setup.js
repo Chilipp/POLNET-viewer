@@ -71,6 +71,9 @@ var NEOTOMAURL = "http://apps.neotomadb.org/explorer";
 // the moment to avoid parallel plotting of the same Overlay
 var plottingOverlay = [];
 
+// The configuration of displaying the timeseries of reconstructions
+var reconConfig = {};
+
 var groupColors = {
     "TRSH": Trees_color,
     "HERB": Herbs_color,
@@ -89,10 +92,14 @@ var groupNames = {
     "AQUA": "Aquatics"
 }
 
-var reconColors = {
-    "WA": "FireBrick",
-    "spatio-temp": "black"
-}
+var Set1 = [
+    // colors used for reconstructions
+    "#377eb8",  // blue
+    "#ff7f00",  // orange
+    "#4daf4a",  // green
+    "#e41a1c",  // red
+    "#984ea3"   // purple
+]
 
 var metaData;
 
@@ -118,7 +125,11 @@ var repo_url = 'data/',
     data_repo = 'Chilipp/POLNET-data';
 
 // Pollen data that has been plotted
-var plottedPollenData = {};  // The pollen data plotted
+var plottedPollenData = {};
+
+// plotted site-based climate reconstructions
+var plottedReconstructions = {};
+var visibleReconstructions = {};
 
 dc.config.defaultColors(d3.schemeRdBu[11])
 
@@ -335,21 +346,27 @@ $(document).ready(function() {
             highlightDisplayed();
         });
 
+        $.getJSON("data/recon/reconstructions.json").done(function(data) {
+            reconConfig = data;
+            createReconConfig(data);
+          return data;
+        })
+
         // $.getJSON("data/overlays/overlays.json").done(function(data) {
         //     overlays = data;
         //   Object.keys(overlays).forEach(createOverlayDiv);
         //   return data;
         // })
 
-    });
+        if (entityParams.length) {
+            var entities = entityParams
+                .map(s => s.split(',')).flat()
+                .map(v => parseInt(v));
+            tableDim.filter(v => entities.includes(v));
+            dc.redrawAll();
+        }
 
-    if (entityParams.length) {
-        var entities = entityParams
-        map(s => s.split(',')).flat()
-            .map(v => parseInt(v));
-        tableDim.filter(v => entities.includes(v))
-        dc.redrawAll();
-    }
+    });
 
     // Switch to a tab if a specific one is mentiond
     var activeTab = urlParams.get('tab');
@@ -359,6 +376,99 @@ $(document).ready(function() {
     }
 
 });
+
+// ==================================================================
+
+function createReconConfig(config) {
+    // Create the configuration of reconstruction configuration
+    var configDiv = document.getElementById("recon-config-tabs");
+    Object.keys(config).forEach(function (variable) {
+        var variableConf = config[variable];
+        var iColor = 0;
+        configDiv.innerHTML += (
+            `<div class="panel panel-default">
+                <div class="panel-heading" role="tab" id="recon-${variable}-heading">
+                    <h4 class="panel-title">
+                        <a role="button" data-toggle="collapse" data-parent="#recon-${variable}-config" href="#recon-${variable}-config" aria-expanded="false" aria-controls="recon-${variable}-config">
+                            ${variableConf.desc}
+                        </a>
+                    </h4>
+                </div>
+                <div id="recon-${variable}-config" class="panel-collapse collapse" role="tabpanel" aria-labelledby="recon-${variable}-heading">
+                    <div class="panel-body" id="recon-${variable}-config-body">
+                    </div>
+                </div>
+            </div>`
+        );
+        var varConfigDiv = document.getElementById(`recon-${variable}-config-body`);
+        visibleReconstructions[variable] = {};
+        Object.keys(variableConf['series']).forEach(function (seriesName) {
+            var seriesConf = variableConf.series[seriesName]
+
+            // set the color for the reconstruction
+            seriesConf['color'] = Set1[iColor];
+
+            varConfigDiv.innerHTML += (
+                `<button role="button" type="button" class="btn active" data-toggle="button" aria-pressed="true" autocomplete="off" id="recon-${variable}-config-${seriesName}-lower-toggle" title="Hide the lower uncertainty range" onclick="updateLine('${variable}', '${seriesName}', 'toggle-lower')"><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span></button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="recon-${variable}-config-${seriesName}-lower" value="${seriesConf.lower[0]}">
+                        ${seriesConf.desc_lower[0]} <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="recon-${variable}-config-${seriesName}-lower-list">
+                    </ul>
+                </div>
+                <button type="button" class="btn active" data-toggle="button" aria-pressed="true" autocomplete="off" title="Hide the ${seriesConf.desc} in the diagrams" id="recon-${variable}-config-${seriesName}-mean-toggle" onclick="updateLine('${variable}', '${seriesName}', 'toggle')">${seriesConf.desc}</button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="recon-${variable}-config-${seriesName}-upper"  value="${seriesConf.upper[0]}">
+                    ${seriesConf.desc_upper[0]} <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="recon-${variable}-config-${seriesName}-upper-list">
+                    </ul>
+                </div>
+                <button role="button" type="button" class="btn active" data-toggle="button" aria-pressed="false" autocomplete="off" id="recon-${variable}-config-${seriesName}-upper-toggle" title="Hide the upper uncertainty range" onclick="updateLine('${variable}', '${seriesName}', 'toggle-upper')"><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span></button>
+                <br>`
+            );
+            var lowerId = `recon-${variable}-config-${seriesName}-lower`,
+                upperId = `recon-${variable}-config-${seriesName}-upper`;
+            var lowerMenu = document.getElementById(`${lowerId}-list`);
+            var upperMenu = document.getElementById(`${upperId}-list`);
+            seriesConf.desc_lower.forEach(function (s, i) {
+                lowerMenu.innerHTML += `<li><a href="javascript:setUncertainty('${lowerId}', '${seriesConf.lower[i]}', '${s}', '${variable}', '${seriesName}');">${s}</a></li>`;
+            });
+            seriesConf.desc_upper.forEach(function (s, i) {
+                upperMenu.innerHTML += `<li><a href="javascript:setUncertainty('${upperId}', '${seriesConf.upper[i]}', '${s}', '${variable}', '${seriesName}');">${s}</a></li>`;
+            });
+
+            visibleReconstructions[variable][seriesName] = {
+                "mean": true,
+                "lower": true,
+                "upper": true
+            }
+
+            var limits = ["upper", "lower"];
+
+            limits.forEach(function (s) {
+                $(document).on('click', `#recon-${variable}-config-${seriesName}-${s}-toggle`, function() {
+                    var btn = $(`#recon-${variable}-config-${seriesName}-${s}-toggle`);
+                    if (btn.hasClass("active")) {
+                        btn.html('<span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>');
+                        btn.attr("title", `Hide the ${s} uncertainty range`);
+                    } else {
+                        btn.html('<span class="glyphicon glyphicon-eye-close" aria-hidden="true"></span>');
+                        btn.attr("title", `Show the ${s} uncertainty range`);
+                    }
+                });
+            });
+            iColor = iColor + 1;
+        });
+    });
+}
+
+function setUncertainty(elemId, value, desc, variable, seriesName) {
+    document.getElementById(elemId).innerHTML = desc + ' <span class="caret"></span>';
+    $("#" + elemId).attr("value", value)
+    updateLine(variable, seriesName, "replot")
+}
 
 // ==================================================================
 
@@ -405,7 +515,7 @@ function displaySampleData(data) {
     displayedData = data;
     highlightDisplayed();
 
-    var activeTab = "pollen-plot";
+    var activeTab = $('#recon-plot').hasClass("active") ? "recon-plot" : "pollen-plot";
     removeUnlocked();
     document.getElementById("pollen-diagram-legend").innerHTML = "<svg/>";
 
@@ -413,17 +523,45 @@ function displaySampleData(data) {
 
     var promises = [];
 
+    // load site reconstructions
+    var reconData = jsonCopy(reconConfig);
+
+    Object.keys(reconData).forEach(function (key) {
+        var series = reconData[key]['series'];
+        Object.keys(series).forEach(function (series_name) {
+            var series_conf = series[series_name]
+            series_conf['data'] = [];
+
+            var data_url = repo_url + `recon/${key}/${series_name}/${data.e_}.tsv`
+
+            promises.push(d3.tsv(
+                data_url,
+                function (d) {
+                    series_conf['data'].push(d);
+                }
+            ).catch(function(reason){
+                console.log(`Error when loading ${data_url}. ` +
+                            `No ${series_name} reconstruction of ${key} ` +
+                            `available for ${data.e_}: ${reason}`);
+                return [];
+            }));
+        });
+    });
+
     // Add pollen data
     promises.push(d3.tsv(
         repo_url + 'entities/' + data.e_ + '.tsv',
         function(d) {
             d.higher_groupid = groupInfo[d.groupid].higher_groupid;
             d.percentage = d.percentage == '' ? NaN : +d.percentage;
+            d.recon_percentage = d.recon_percentage == '' ? NaN : +d.recon_percentage;
             d.count = d.count == '' ? NaN : +d.count;
             d.e_ = data.e_;
             d.age = (d.age == '' || d.age.toLowerCase() == 'nan') ? NaN : +d.age;
             return d
-        }).catch(function(reason){console.log(`No pollen data available for ${data.e_}: ${reason}`); return [];})
+        }).catch(function(reason){
+            console.log(`No pollen data available for ${data.e_}: ${reason}`);
+            return [];})
     );
 
     Promise.all(promises).then(function(entityData) {
@@ -441,7 +579,23 @@ function displaySampleData(data) {
             plottedPollenData[data.e_] = pollenData;
             getNamesMenu(elemId, data.e_);
             plotPollenLegend('pollen-diagram-legend');
+            $("#pollen-info").remove()
         }
+
+        var elemId = lockableElement("recon-diagram", data.e_, data.sitename);
+
+        Object.keys(reconData).forEach(function (variable) {
+            $('#meta-tabs a[href="#recon-plot"]').tab('show');
+            if (Object.keys(reconData[variable].series).some(seriesName => isVisible(variable, seriesName) && (reconData[variable].series[seriesName].data.length > 0))) {
+                d3.select("#" + elemId).append("div")
+                    .attr("id", elemId + "-" + variable)
+                    .attr("width", "100%");
+                plotReconstructions(
+                    variable, reconData[variable], elemId + "-" + variable)
+                $("#recon-info").remove()
+            }
+        })
+        plottedReconstructions[data.e_] = reconData;
 
         $('#meta-tabs a[href="#' + activeTab + '"]').tab('show');
     })

@@ -146,7 +146,7 @@
 
                 <li role="presentation"><a href="#pollen-plot" aria-controls="pollen-plot" role="tab" data-toggle="tab">Pollen diagram</a></li>
 
-                <li role="presentation"><a href="#temperature-plot" aria-controls="temperature-plot" role="tab" data-toggle="tab">Temperature reconstruction</a></li>
+                <li role="presentation"><a href="#recon-plot" aria-controls="recon-plot" role="tab" data-toggle="tab">Climate reconstruction</a></li>
 
                 <li role="presentation"><a href="#overlays" aria-controls="overlays" role="tab" data-toggle="tab">Overlays</a></li>
             </ul>
@@ -240,6 +240,8 @@
                 <div role="tabpanel" class="tab-pane" id="pollen-plot">
                     <div class="dc-chart col-xs-10">
                         <div id="pollen-diagram" style="width:95%;">
+                        </div>
+                        <div class="alert alert-info" id="pollen-info">
                             Select a site from the map to show the data.
                         </div>
                     </div>
@@ -248,16 +250,27 @@
                     </div>
                 </div>
 
-                <div role="tabpanel" class="tab-pane" id="temperature-plot">
+                <div role="tabpanel" class="tab-pane" id="recon-plot">
                     <div class="dc-chart col-xs-10">
-                        <div id="temperature-diagram" style="width:95%;">
+                        <div class="row">
+                            <a class="btn" role="button" data-toggle="collapse" href="#recon-config" aria-expanded="false" aria-controls="recon-config" style="display: block;">
+                                Configure
+                            </a>
+                            <div class="collapse" id="recon-config">
+                                <div class="panel-group" id="recon-config-tabs" role="tablist" aria-multiselectable="true">
+                                    <!-- Will be filled by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="recon-diagram" style="width:95%;">
                         </div>
                         <div class="alert alert-info" id="recon-info">
-                            Select a site from the map to show it's reconstructed temperature.
+                            Select a site from the map to show it's climate reconstruction.
                         </div>
                     </div>
                     <div class="dc-chart col-xs-2">
-                        <div id="temperature-diagram-legend"></div>
+                        <div id="recon-diagram-legend"></div>
                     </div>
                 </div>
 
