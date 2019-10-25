@@ -1101,3 +1101,59 @@ function updateLine(variable, seriesName, action) {
         }
     })
 }
+
+
+function plotReconstructionsLegend(elemId) {
+	/**
+	* Plot the legend for the pollen diagram
+    *
+	* @see plotPollen
+	*
+	* @param  {string} elemId - The id where to plot the diagram
+	*/
+    var svg = d3.select("#" + elemId).select("svg")
+        .attr("height", 800);
+
+    legendPadding = 10;
+
+    var g = svg.append("g").attr("class", "legend")
+        .style("font-size", "18px")
+        .attr("transform", "translate(25, 40)");
+
+    var k = 0;
+
+    Object.keys(reconConfig).forEach(function (variable, i) {
+        var variableConf = reconConfig[variable];
+        g.append("text")
+            .attr("y", k +"em")
+            .attr("x", "1em")
+            .text(variableConf.desc || variable)
+            .style("font-weight", "bold");
+        k = k + 1.5;
+        Object.keys(variableConf.series).forEach(function (seriesName, j) {
+            var seriesConf = variableConf.series[seriesName];
+            g.append("text")
+                .attr("y", k +"em")
+                .attr("x", "1em")
+                .text(seriesConf.desc || seriesName);
+            g.append("circle")
+                .attr("cy", k-0.25+"em")
+                .attr("cx", 0)
+                .attr("r", "0.4em")
+                .style("fill", seriesConf.color || "none")
+                .style("stroke", "none")
+                .style("stroke-dasharray", "none");
+            k = k + 1;
+        })
+        k += 1
+    })
+
+    var lbbox = g.node().getBBox();
+    g.append("rect")
+        .attr("x",(lbbox.x-legendPadding))
+        .attr("y",(lbbox.y-legendPadding))
+        .attr("height",(lbbox.height+2*legendPadding))
+        .attr("width",(lbbox.width+2*legendPadding))
+        .style("fill", "none")
+        .style("stroke", "black");
+}

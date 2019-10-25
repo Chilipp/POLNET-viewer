@@ -518,6 +518,7 @@ function displaySampleData(data) {
     var activeTab = $('#recon-plot').hasClass("active") ? "recon-plot" : "pollen-plot";
     removeUnlocked();
     document.getElementById("pollen-diagram-legend").innerHTML = "<svg/>";
+    document.getElementById("recon-diagram-legend").innerHTML = "<svg/>";
 
     if (!data.ismodern) plotSamplesPerMill(data.sample_dates, "datesgraph-" + data.Id);
 
@@ -592,6 +593,7 @@ function displaySampleData(data) {
                     .attr("width", "100%");
                 plotReconstructions(
                     variable, reconData[variable], elemId + "-" + variable)
+                plotReconstructionsLegend("recon-diagram-legend");
                 $("#recon-info").remove()
             }
         })
