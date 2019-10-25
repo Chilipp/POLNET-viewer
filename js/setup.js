@@ -554,7 +554,7 @@ function displaySampleData(data) {
         function(d) {
             d.higher_groupid = groupInfo[d.groupid].higher_groupid;
             d.percentage = d.percentage == '' ? NaN : +d.percentage;
-            d.recon_percentage = d.recon_percentage == '' ? NaN : +d.recon_percentage;
+            d.recon_percentage = d.recon_percentage == '' ? 0 : +d.recon_percentage;
             d.count = d.count == '' ? NaN : +d.count;
             d.e_ = data.e_;
             d.age = (d.age == '' || d.age.toLowerCase() == 'nan') ? NaN : +d.age;

@@ -29,7 +29,7 @@ var groupNames = {
 
 //====================================================================
 
-function plotPollen(data, elemId, groupByName="acc_varname") {
+function plotPollen(data, elemId, groupByName="consol_name") {
 	/**
 	* Plot the pollen percentages of one single sample as a bar diagram.
     *
@@ -74,9 +74,11 @@ function plotPollen(data, elemId, groupByName="acc_varname") {
         groupMap[key] = [];
     });
 
+    var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
+
     var counts = {};
 
-    data.forEach(function(d) {
+    data.filter(d => +d[percName] > 0).forEach(function(d) {
         var name = d[groupByName] ? d[groupByName] : (
             d.consol_name ? d.consol_name : (
                 d.acc_varname ? d.acc_varname : d.original_varname));
@@ -88,7 +90,7 @@ function plotPollen(data, elemId, groupByName="acc_varname") {
                 orig: [], recon: [], acc: [], consol: [], group: []};
             groupMap[d.higher_groupid].push(name);
         }
-        counts[name].percentage += d[percName];
+        counts[name].percentage += +d[percName];
         counts[name].count += d.count;
         if (!(counts[name].orig.includes(d.original_varname))) {
             counts[name].orig.push(d.original_varname);
@@ -567,13 +569,15 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
         groupMap[key] = [];
     });
 
+    var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
+
     var counts = {};
     // first loop: Create empty config for all taxa
     var firstAge = data[0].age;
     var allAges = [];
     var allSamples = [];
     var sampleAges = [];
-    data.forEach(function(d) {
+    data.filter(d => +d[percName] > 0).forEach(function(d) {
         if (!(allSamples.includes(d.sample_))) {
             allSamples.push(d.sample_);
             sampleAges.push({age: d.age, sample: d.sample_})
@@ -586,9 +590,7 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
 
     zeros = new Array(sampleAges.length).fill(0);
 
-    var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
-
-    data.forEach(function(d){
+    data.filter(d => +d[percName] > 0).forEach(function(d){
         // Use the original_varname here because it is unique (acc_varname is not)
         var name = d[groupByName] ? d[groupByName] : (
             d.consol_name ? d.consol_name : (
@@ -854,7 +856,8 @@ function getNamesMenu(elemId, entity, fossil=true) {
                         menuDiv.property("value"));
                 } else {
                     plotPollen(plottedPollenData[entity].filter(
-                            d => d.sample_ == parseInt(this.value)), elemId);
+                            d => d.sample_ == parseInt(this.value)), elemId,
+                            menuDiv.property("value"));
 
                 }
             });
