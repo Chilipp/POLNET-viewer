@@ -36,7 +36,7 @@ var groupInfo = {};
 
 // The initial center for the map
 var mapCenter = [45, -20],
-    mapZoom = 3;
+    mapZoom = 1;
 
 var datesGraphWidth = 250;
 var datesGraphHeight = 120;
