@@ -75,6 +75,7 @@ function plotPollen(data, elemId, groupByName="consol_name") {
     });
 
     var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
+    var addPerc = groupByName != 'recon_name';
 
     var counts = {};
 
@@ -90,8 +91,10 @@ function plotPollen(data, elemId, groupByName="consol_name") {
                 orig: [], recon: [], acc: [], consol: [], group: []};
             groupMap[d.higher_groupid].push(name);
         }
-        counts[name].percentage += +d[percName];
-        counts[name].count += d.count;
+        if (addPerc || counts[name].percentage == 0) {
+            counts[name].percentage += +d[percName];
+            counts[name].count += d.count;
+        }
         if (!(counts[name].orig.includes(d.original_varname))) {
             counts[name].orig.push(d.original_varname);
         }
@@ -570,6 +573,7 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
     });
 
     var percName = groupByName == 'recon_name' ? 'recon_percentage' : 'percentage';
+    var addPerc = groupByName != 'recon_name';
 
     var counts = {};
     // first loop: Create empty config for all taxa
@@ -603,8 +607,10 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
                 orig: [], recon: [], acc: [], consol: [], group: []};
             groupMap[d.higher_groupid].push(name);
         }
-        counts[name].x[allSamples.indexOf(d.sample_)] += d[percName];
-        counts[name].count[allSamples.indexOf(d.sample_)] += d.count;
+        if (addPerc || counts[name].x[allSamples.indexOf(d.sample_)] == 0) {
+            counts[name].x[allSamples.indexOf(d.sample_)] += d[percName];
+            counts[name].count[allSamples.indexOf(d.sample_)] += d.count;
+        }
         if (!(counts[name].orig.includes(d.original_varname))) {
             counts[name].orig.push(d.original_varname);
         }
