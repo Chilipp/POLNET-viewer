@@ -189,6 +189,52 @@
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="filters-tab">
+                    <div class="row" id="analogue-info">
+                        <div class="col-xs-12 alert alert-info">
+                            Use the filters to subset the range of climate analogues. Every site/sample is represented multiple times in each filter (ones per sample where it serves as a climate analogue). If you want to select the unique sites/samples, check the <b>Unique analogue site</b> option.
+                        </div>
+                    </div>
+                    <div class="row" id="analogue-filters-1">
+                        <div class="dc-chart col-xs-4" id="analogue-country-chart">
+                            <div class="dc-chart-title">
+                                Analogue Country
+                                <a class="reset"  href="javascript:countryChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-2" id="analogue-filter">
+                            <div class="dc-chart-title">
+                                Distinct Analogues
+                                <a class="reset"  href="javascript:analogueMenu.filterAll();dc.redrawAll();" style='visibility: hidden;'>reset</a>
+                            </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-6" id="analogue-distance-chart">
+                            <div class="dc-chart-title">
+                                Analogue distance
+                                <a class="reset"  href="javascript:distanceChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="analogue-filters-2">
+
+                        <div class="dc-chart col-xs-6" id="analogue-jja-chart">
+                            <div class="dc-chart-title">
+                                Analogue JJA temperatures
+                                <a class="reset"  href="javascript:jjaChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-6" id="analogue-djf-chart">
+                            <div class="dc-chart-title">
+                                Analogue DJF temperatures
+                                <a class="reset"  href="javascript:djfChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+
+                    </div>
+
                     <div class="row">
 
                         <div class="dc-chart col-xs-3" id="origin-chart">
@@ -266,7 +312,7 @@
                         <div id="recon-diagram" style="width:95%;">
                         </div>
                         <div class="alert alert-info" id="recon-info">
-                            Select a site from the map to show it's climate reconstruction.
+                            Select a site from the map to show its climate reconstruction.
                         </div>
                     </div>
                     <div class="dc-chart col-xs-2">

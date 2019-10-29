@@ -27,6 +27,11 @@ var groupNames = {
 "AQUA": "Aquatics"
 }
 
+
+// analogue filters. The keys are the (fossil) entities, the
+// values are mappings with dc.js charts as value
+var analogueCharts = {};
+
 //====================================================================
 
 function plotPollen(data, elemId, groupByName="consol_name") {
@@ -1162,4 +1167,23 @@ function plotReconstructionsLegend(elemId) {
         .attr("width",(lbbox.width+2*legendPadding))
         .style("fill", "none")
         .style("stroke", "black");
+}
+
+
+function showAnalogues(data, elemId) {
+
+    var entity = data[0].fossil_e_;
+    var analogueUrl = baseUrl + `?meta=analogues/${entity}.tsv&tab=filters-tab`;
+    analogues = [];
+    data.forEach(function(d) {
+        if (!analogues.includes(d.e_)) {
+            analogues.push(d.e_);
+        }
+    })
+    var elem = $("#" + elemId);
+    elem.html(
+        `<a class="btn" role="button" href="${analogueUrl}" aria-expanded="false" style="display: block;" target="_blank">
+            View the ${analogues.length} analogues
+        </a>`
+    )
 }

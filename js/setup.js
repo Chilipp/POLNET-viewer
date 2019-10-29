@@ -11,7 +11,11 @@ var countryDim,
     nsamplesDim,
     ageDim,
     checkBoxDim,
-    tableDim;
+    tableDim,
+    jjaDim,
+    tjfDim,
+    distanceDim,
+    analogueDim;
 
 var dataTable,
     // formatted meta data table
@@ -25,7 +29,12 @@ var dataTable,
     // entity origin chart
     originChart,
     // fossil, modern, ... checkboxes
-    checkBoxMenu;
+    checkBoxMenu,
+    // analogue charts
+    djfChart,
+    jjaChart,
+    countryChart,
+    distanceChart;
 
 // all charts except the map
 var allCharts;
@@ -49,8 +58,8 @@ var displayedData = {};
 var nsamplesRange = [0., 200.],
     nsamplesBinWidth = 10.;
 
-var age1Range = [-2.5, 12000.],
-    age2Range = [-2.5, 12000.],
+var age1Range = [-300, 12000.],
+    age2Range = [-300, 12000.],
     ageBinWidth = 100;
 
 // The path to the marker
@@ -98,7 +107,11 @@ var Set1 = [
     "#ff7f00",  // orange
     "#4daf4a",  // green
     "#e41a1c",  // red
-    "#984ea3"   // purple
+    "#984ea3",  // purple
+    "#ffff33",  // yellow
+    "#a65628",  // brown
+    "#f781bf",  // pink
+    "#999999"   // grey
 ]
 
 var metaData;
@@ -130,6 +143,12 @@ var plottedPollenData = {};
 // plotted site-based climate reconstructions
 var plottedReconstructions = {};
 var visibleReconstructions = {};
+
+// Variable that is True if analogues are shown
+var analogueShown;
+
+// Array of unique analogues
+var uniqueAnalogues = [];
 
 dc.config.defaultColors(d3.schemeRdBu[11])
 
@@ -168,6 +187,28 @@ $(document).ready(function() {
     } else {
         repo_url = 'data/';
         user_branch = 'master';
+    }
+
+    baseUrl = location.protocol + "//" + location.host + location.pathname;
+    urlFossil = baseUrl + "?meta=fossil.tsv";
+    urlCalib = baseUrl + "?meta=modern-surface-samples.tsv";
+    urlAll = baseUrl + "?meta=meta.tsv";
+    document.getElementById("btn-fossil").href = urlFossil;
+    document.getElementById("btn-calibration").href = urlCalib;
+    document.getElementById("btn-all").href = urlAll;
+
+    if (meta_file == 'fossil.tsv') {
+        document.getElementById("btn-fossil").className += ' btn-primary';
+        dataVersion = "fossil";
+    } else if (meta_file == 'modern-surface-samples.tsv') {
+        document.getElementById("btn-calibration").className += ' btn-primary';
+        dataVersion = "calibration";
+    } else if (meta_file == 'meta.tsv') {
+        document.getElementById("btn-all").className += ' btn-primary';
+        dataVersion = "all";
+    } else {
+        document.getElementById("btn-custom").className += ' btn-primary';
+        dataVersion = "custom";
     }
 
     //-----------------------------------
@@ -373,6 +414,8 @@ $(document).ready(function() {
     if (activeTab) {
         $(`#meta-tabs a[href="#${activeTab}"]`).tab('show');
         document.getElementById(activeTab).scrollIntoView();
+    } else {
+        $(`#meta-tabs a[href="#meta-table"]`).tab('show');
     }
 
 });
@@ -495,6 +538,10 @@ function parseMeta(d, i) {
         d.ismodern = d.ismodern.toLowerCase().startsWith('f') ? false : true;
     };
 
+    if (typeof(d.hasmodern) !== typeof(true)) {
+        d.hasmodern = d.hasmodern.toLowerCase().startsWith('f') ? false : true;
+    };
+
     if (typeof(d.isdigitized) !== typeof(true)) {
         d.isdigitized = d.isdigitized.toLowerCase().startsWith('f') ? false : true;
     };
@@ -505,6 +552,24 @@ function parseMeta(d, i) {
     for (var key in d) {
         d[key] = typeof d[key] !== 'undefined' ? d[key] : '';
     }
+
+    if (typeof(d.dist) !== "undefined") {
+        analogueShown = true;
+        d.t_jja = +d.t_jja;
+        d.t_djf = +d.t_djf;
+        d.age = +d.age;
+        d.dist = +d.dist;
+        d.k = parseInt(d.k);
+        d.e_ = parseInt(d.e_);
+        d.fossil_e_ = parseInt(d.fossil_e_);
+        if (!uniqueAnalogues.includes(d.e_)) {
+            d.first = true;
+            uniqueAnalogues.push(d.e_);
+        } else {
+            d.first = false;
+        }
+    }
+
     return d;
 }
 
@@ -549,6 +614,16 @@ function displaySampleData(data) {
         });
     });
 
+    // Add climate analogue data
+    promises.push(d3.tsv(
+        repo_url + 'analogues/' + data.e_ + '.tsv',
+        parseMeta).catch(function(reason){
+            console.log(
+                `Error when loading ${repo_url}analogues/${data.e_}.tsv. ` +
+                `No climate analogue data available for ${data.e_}: ${reason}`);
+            return [];})
+    );
+
     // Add pollen data
     promises.push(d3.tsv(
         repo_url + 'entities/' + data.e_ + '.tsv',
@@ -561,11 +636,15 @@ function displaySampleData(data) {
             d.age = (d.age == '' || d.age.toLowerCase() == 'nan') ? NaN : +d.age;
             return d
         }).catch(function(reason){
-            console.log(`No pollen data available for ${data.e_}: ${reason}`);
+            console.log(
+                `Error when loading ${repo_url}entities/${data.e_}.tsv. ` +
+                `No pollen data available for ${data.e_}: ${reason}`
+            );
             return [];})
     );
 
     Promise.all(promises).then(function(entityData) {
+
         var pollenData = entityData.pop();
         if (pollenData.length > 0) {
             var elemId = lockableElement("pollen-diagram", data.e_, data.sitename);
@@ -585,6 +664,12 @@ function displaySampleData(data) {
 
         var elemId = lockableElement("recon-diagram", data.e_, data.sitename);
 
+        var analogueData = entityData.pop();
+        if (analogueData.length > 0) {
+            $('#meta-tabs a[href="#recon-plot"]').tab('show');
+            showAnalogues(analogueData, elemId);
+        }
+
         Object.keys(reconData).forEach(function (variable) {
             $('#meta-tabs a[href="#recon-plot"]').tab('show');
             if (Object.keys(reconData[variable].series).some(seriesName => isVisible(variable, seriesName) && (reconData[variable].series[seriesName].data.length > 0))) {
@@ -601,6 +686,7 @@ function displaySampleData(data) {
 
         $('#meta-tabs a[href="#' + activeTab + '"]').tab('show');
     })
+
 };
 
 // ==================================================================
@@ -754,6 +840,13 @@ function initCrossfilter(data) {
         };
         if (d.isdigitized) ret.push("digitized sites/samples");
         if (d.ismodern && d.nsamples12k > 1) ret.push("modern sites");
+
+        if (analogueShown) {
+            if (d.k == 1) ret.push("Closest analogues");
+            if (d.hasmodern && (!d.ismodern)) ret.push("Core tops");
+            if (d.first) ret.push("Unique analogue sites");
+        }
+
         return ret;
     }, true);
 
@@ -907,6 +1000,123 @@ function initCrossfilter(data) {
     .on('pretransition', display_page_buttons);
 
     //-----------------------------------
+    // Climate Analogues
+    if (analogueShown) {
+
+        //-----------------------------------
+        countryChart = dc.pieChart(`#analogue-country-chart`);
+
+        countryChart
+            .width(400)
+            .height(180)
+            .slicesCap(8)
+            .innerRadius(0)
+            .dimension(countryDim)
+            .group(countryDim.group())
+            .ordinalColors(Set1)
+            .legend(dc.legend());
+
+        //-----------------------------------
+        analogueDim = xf.dimension(d => d.e_);
+
+        analogueMenu = dc.selectMenu('#analogue-filter')
+            .dimension(analogueDim)
+            .group(analogueDim.group())
+            .multiple(true)
+            .numberVisible(10)
+            .controlsUseVisibility(true);
+
+        //-----------------------------------
+        distanceChart = dc.scatterPlot(`#analogue-distance-chart`);
+
+        var maxK = Math.max.apply(Math, data.map(d => d.k));
+        var maxDist = Math.max.apply(Math, data.map(d => d.dist));
+
+        distanceDim = xf.dimension(d => [d.k, d.dist]);
+
+        distanceChart
+            .width(500)
+            .height(180)
+            .margins({top: 10, right: 20, bottom: 30, left: 40})
+            .dimension(distanceDim)
+            .group(distanceDim.group())
+            .xAxisLabel("Chord distance [%]")
+            .yAxisLabel("Analogue number (K)")
+            .x(d3.scaleLinear().domain([0, maxK + 1]))
+            .y(d3.scaleLinear().domain([0, maxDist - (maxDist % 5) + 5]))
+            .renderHorizontalGridLines(true)
+            .renderVerticalGridLines(true)
+            .symbolSize(8)
+            .excludedSize(2);
+
+        //-----------------------------------
+        var minAge = Math.round(Math.min.apply(null, data.map(d => d.age)));
+        var maxAge = Math.round(Math.max.apply(null, data.map(d => d.age)));
+
+        // round to closest 50ies
+        minAge -= ((50 - ((minAge < 0 ? -minAge : 50 - minAge) % 50)) % 50);
+        maxAge += ((50 - ((maxAge < 0 ? 50 + maxAge : maxAge) % 50)) % 50);
+
+        var minTempJJA = Math.round(Math.min.apply(null, data.map(d => d.t_jja)));
+        var maxTempJJA = Math.round(Math.max.apply(null, data.map(d => d.t_jja)));
+
+        // round to closest 50ies
+        minTempJJA -= ((5 - ((minTempJJA < 0 ? -minTempJJA : 5 - minTempJJA) % 5)) % 5);
+        maxTempJJA += ((5 - ((maxTempJJA < 0 ? 5 + maxTempJJA : maxTempJJA) % 5)) % 5);
+
+        jjaChart = dc.scatterPlot('#analogue-jja-chart');
+
+        jjaDim = xf.dimension(d => [d.age, d.t_jja]);
+
+        jjaChart
+            .width(500)
+            .height(180)
+            .margins({top: 10, right: 20, bottom: 30, left: 40})
+            .dimension(jjaDim)
+            .group(jjaDim.group())
+            .xAxisLabel("Age [yr cal BP]")
+            .yAxisLabel("JJA Temperature [°C]")
+            .x(d3.scaleLinear().domain([minAge, maxAge]))
+            .y(d3.scaleLinear().domain([minTempJJA, maxTempJJA]))
+            .renderHorizontalGridLines(true)
+            .renderVerticalGridLines(true)
+            .symbolSize(8)
+            .excludedSize(2);
+
+        //-----------------------------------
+        var minTempDJF = Math.round(Math.min.apply(null, data.map(d => d.t_djf)));
+        var maxTempDJF = Math.round(Math.max.apply(null, data.map(d => d.t_djf)));
+
+        // round to closest 50ies
+        minTempDJF -= ((5 - ((minTempDJF < 0 ? -minTempDJF : 5 - minTempDJF) % 5)) % 5);
+        maxTempDJF += ((5 - ((maxTempDJF < 0 ? 5 + maxTempDJF : maxTempDJF) % 5)) % 5);
+
+        djfChart = dc.scatterPlot('#analogue-djf-chart');
+
+        djfDim = xf.dimension(d => [d.age, d.t_djf]);
+
+        djfChart
+            .width(500)
+            .height(180)
+            .margins({top: 10, right: 20, bottom: 30, left: 40})
+            .dimension(djfDim)
+            .group(djfDim.group())
+            .xAxisLabel("Age [yr cal BP]")
+            .yAxisLabel("DJF Temperature [°C]")
+            .x(d3.scaleLinear().domain([minAge, maxAge]))
+            .y(d3.scaleLinear().domain([minTempDJF, maxTempDJF]))
+            .renderHorizontalGridLines(true)
+            .renderVerticalGridLines(true)
+            .symbolSize(8)
+            .excludedSize(2);
+
+    } else {
+        $("#analogue-info").remove();
+        $("#analogue-filters-1").remove();
+        $("#analogue-filters-2").remove();
+    }
+
+    //-----------------------------------
     var originColors = d3.scaleOrdinal()
       .domain(["BINNEY", "POLARVE eur3", "EMBSECBIO", "NEOTOMA", "EMPD", "EPD", "ACER database", "Unknown"])
       .range(["#e34a33", Ocean_color, Ferns_color, Tree_color, Herbs_color, Ferns_color, Ferns_color, Unkown_color]);   // http://colorbrewer2.org/
@@ -1011,6 +1221,13 @@ function initCrossfilter(data) {
         dataTable, formattedDataTable, originChart, countryMenu,
         continentMenu, nsamplesChart, checkBoxMenu
     ];
+
+    if (analogueShown) {
+        [countryChart, analogueMenu, distanceChart, jjaChart, djfChart]
+            .forEach(function(chart) {
+                allCharts.push(chart);
+            });
+    }
 
     //-----------------------------------
     dc.renderAll();
