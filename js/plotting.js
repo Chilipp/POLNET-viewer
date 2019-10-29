@@ -512,7 +512,7 @@ function plotSamplesPerMill(data, elemId) {
 
     var x = d3.scaleOrdinal()
         .range(Array.from(Array(13).keys()).map(
-            function(d) {return d * width / 13;})),
+            function(d) {return (d + 1) * width / 13;})),
         y = d3.scaleLinear()
             .rangeRound([height, 0]);
 
@@ -560,7 +560,7 @@ function plotSamplesPerMill(data, elemId) {
         .attr("height", d => height - y(d))
         .style("fill", "steelblue")
         .attr("transform", function (d, i) {
-            var translate = [barWidth * i + barPadding / 2 , 0];
+            var translate = [barWidth * (i + 0.5) + barPadding / 2, 0];
             return "translate("+ translate +")";
         });
 }
