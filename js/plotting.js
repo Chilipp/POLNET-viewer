@@ -1022,7 +1022,10 @@ function plotLine(seriesData, g) {
         .attr('stroke-width', 2)
         .attr("d", seriesData.line);
 
-    var plotUncertanties = (seriesData.plot_data[0].uncertainties.length > 0);
+    var plotUncertanties = (
+        (seriesData.plot_data.length > 0) &&
+        (seriesData.plot_data[0].uncertainties.length > 0)
+    );
 
     if (plotUncertanties) {
 
