@@ -130,12 +130,12 @@ importanceNames = importanceLevels.map(l => analogueImportance[l]);
 
 var Blues = [
     "#023858",
+    "#023858",
     "#045a8d",
     "#0570b0",
     "#3690c0",
     "#74a9cf",
-    "#a6bddb",
-    "#d0d1e6"
+    "#a6bddb"
 ]
 
 var metaData;
