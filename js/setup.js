@@ -114,6 +114,30 @@ var Set1 = [
     "#999999"   // grey
 ]
 
+var analogueImportance = {
+    90: "The only driver",
+    75: "Extremely important",
+    50: "Very important",
+    30: "Important",
+    15: "Less important",
+    0: "Not important"
+};
+analogueImportance[-1] = "Never used";
+
+var importanceLevels = Object.keys(analogueImportance);
+importanceLevels.sort((a, b) => b - a);
+importanceNames = importanceLevels.map(l => analogueImportance[l]);
+
+var Blues = [
+    "#023858",
+    "#045a8d",
+    "#0570b0",
+    "#3690c0",
+    "#74a9cf",
+    "#a6bddb",
+    "#d0d1e6"
+]
+
 var metaData;
 
 var dataVersion = "fossil";  // stable, latest or custum
@@ -557,6 +581,8 @@ function parseMeta(d, i) {
         analogueShown = true;
         d.t_jja = +d.t_jja;
         d.t_djf = +d.t_djf;
+        d.sampled_t_jja = +d.sampled_t_jja;
+        d.sampled_t_djf = +d.sampled_t_djf;
         d.age = +d.age;
         d.dist = +d.dist;
         d.k = parseInt(d.k);
@@ -1050,6 +1076,11 @@ function initCrossfilter(data) {
             .excludedSize(2);
 
         //-----------------------------------
+
+        var analogueColors = d3.scaleOrdinal()
+            .domain(importanceNames)
+            .range(Blues);
+
         var minAge = Math.round(Math.min.apply(null, data.map(d => d.age)));
         var maxAge = Math.round(Math.max.apply(null, data.map(d => d.age)));
 
@@ -1066,7 +1097,7 @@ function initCrossfilter(data) {
 
         jjaChart = dc.scatterPlot('#analogue-jja-chart');
 
-        jjaDim = xf.dimension(d => [d.age, d.t_jja]);
+        jjaDim = xf.dimension(d => [d.age, d.t_jja, getAnalogueImportance(d.sampled_t_jja)]);
 
         jjaChart
             .width(500)
@@ -1081,7 +1112,19 @@ function initCrossfilter(data) {
             .renderHorizontalGridLines(true)
             .renderVerticalGridLines(true)
             .symbolSize(8)
-            .excludedSize(2);
+            .excludedSize(2)
+            .colorAccessor(d => d.key[2])
+            .colors(analogueColors)
+            .filterHandler(function(dim, filters) {
+                if(!filters || !filters.length) {
+                    dim.filter(null);
+                } else {
+                    // assume it's one RangedTwoDimensionalFilter
+                    dim.filterFunction(function(d) {
+                        return filters[0].isFiltered([d[0],d[1]]);
+                    })
+                }
+             });
 
         //-----------------------------------
         var minTempDJF = Math.round(Math.min.apply(null, data.map(d => d.t_djf)));
@@ -1093,7 +1136,7 @@ function initCrossfilter(data) {
 
         djfChart = dc.scatterPlot('#analogue-djf-chart');
 
-        djfDim = xf.dimension(d => [d.age, d.t_djf]);
+        djfDim = xf.dimension(d => [d.age, d.t_djf, getAnalogueImportance(d.sampled_t_djf)]);
 
         djfChart
             .width(500)
@@ -1108,30 +1151,75 @@ function initCrossfilter(data) {
             .renderHorizontalGridLines(true)
             .renderVerticalGridLines(true)
             .symbolSize(8)
-            .excludedSize(2);
+            .excludedSize(2)
+            .colorAccessor(d => d.key[2])
+            .colors(analogueColors)
+            .filterHandler(function(dim, filters) {
+                if(!filters || !filters.length) {
+                    dim.filter(null);
+                } else {
+                    // assume it's one RangedTwoDimensionalFilter
+                    dim.filterFunction(function(d) {
+                        return filters[0].isFiltered([d[0],d[1]]);
+                    })
+                }
+             });
+
+        //-----------------------------------
+        jjaImportanceDim = xf.dimension(d => getAnalogueImportance(d.sampled_t_jja));
+
+        jjaImportanceChart  = dc.rowChart("#analogue-jja-importance-chart");
+
+        jjaImportanceChart
+            .width(500)
+            .ordering(d => importanceNames.indexOf(d.key))
+            .margins({top: 10, right: 10, bottom: 30, left: 30})
+            .dimension(jjaImportanceDim)
+            .group(jjaImportanceDim.group())
+            .colors(analogueColors)
+            .elasticX(true)
+            .gap(2)
+            .xAxis().ticks(4);
+
+        //-----------------------------------
+        djfImportanceDim = xf.dimension(d => getAnalogueImportance(d.sampled_t_djf));
+
+        djfImportanceChart  = dc.rowChart("#analogue-djf-importance-chart");
+
+        djfImportanceChart
+            .width(500)
+            .ordering(d => importanceNames.indexOf(d.key))
+            .margins({top: 10, right: 10, bottom: 30, left: 30})
+            .dimension(djfImportanceDim)
+            .group(djfImportanceDim.group())
+            .colors(analogueColors)
+            .elasticX(true)
+            .gap(2)
+            .xAxis().ticks(4);
 
     } else {
         $("#analogue-info").remove();
         $("#analogue-filters-1").remove();
         $("#analogue-filters-2").remove();
+        $("#analogue-filters-3").remove();
     }
 
     //-----------------------------------
     var originColors = d3.scaleOrdinal()
-      .domain(["BINNEY", "POLARVE eur3", "EMBSECBIO", "NEOTOMA", "EMPD", "EPD", "ACER database", "Unknown"])
-      .range(["#e34a33", Ocean_color, Ferns_color, Tree_color, Herbs_color, Ferns_color, Ferns_color, Unkown_color]);   // http://colorbrewer2.org/
+        .domain(["BINNEY", "POLARVE eur3", "EMBSECBIO", "NEOTOMA", "EMPD", "EPD", "ACER database", "Unknown"])
+        .range(["#e34a33", Ocean_color, Ferns_color, Tree_color, Herbs_color, Ferns_color, Ferns_color, Unkown_color]);   // http://colorbrewer2.org/
 
     originChart  = dc.rowChart("#origin-chart");
 
     originChart
-      .width(180)
-      .margins({top: 10, right: 10, bottom: 30, left: 10})
-      .dimension(originDim)
-      .group(originDim.group())
-      .colors(originColors)
-      .elasticX(true)
-      .gap(2)
-      .xAxis().ticks(4);
+        .width(180)
+        .margins({top: 10, right: 10, bottom: 30, left: 10})
+        .dimension(originDim)
+        .group(originDim.group())
+        .colors(originColors)
+        .elasticX(true)
+        .gap(2)
+        .xAxis().ticks(4);
 
     //-----------------------------------
 
@@ -1190,7 +1278,7 @@ function initCrossfilter(data) {
         .renderVerticalGridLines(true)
         .symbolSize(8)
         .excludedSize(4)
-        .existenceAccessor(function(d) { return d.value > 0 ; })
+        .existenceAccessor(function(d) { return d.value > -100 ; })
         .colorAccessor(function (d) { return d.key[2]; })
         .colors(originColors)
         .filterHandler(function(dim, filters) {
@@ -1231,6 +1319,13 @@ function initCrossfilter(data) {
 
     //-----------------------------------
     dc.renderAll();
+}
+
+function getAnalogueImportance(val) {
+    var percentages = Object.keys(analogueImportance);
+    percentages.sort((a, b) => b - a);
+    return analogueImportance[
+        percentages.filter(p => p < val)[0]];
 }
 
 // ====================================

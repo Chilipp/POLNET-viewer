@@ -283,3 +283,22 @@ div.scroll {
     font-weight: normal;
     margin: 5px;
 }
+
+span.info:hover {
+    cursor: help;
+    position: relative
+}
+span.info span {
+    display: none
+}
+span.info:hover span {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 2px;
+    color: #fff;
+    padding: 12px;
+    display: inline;
+    z-index: 1000;
+    width: 400px;
+    position: absolute;
+    font-family: sans-serif;
+}

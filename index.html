@@ -236,6 +236,48 @@
 
                     </div>
 
+                    <div class="row" id="analogue-filters-3">
+
+                        <div class="dc-chart col-xs-6" id="analogue-jja-importance-chart">
+                            <div class="dc-chart-title">
+                                Importance of analogue JJA temperature
+                                <span class="info glyphicon glyphicon-info-sign"><span>
+                                    The importance of the analogue JJA temperature is classified based the percentage that the corresponding temperature has been chosen in a constrained Gibbs sampling with 2000 realizations and a temperature threshold of 5 °C. We define
+                                    <ul>
+                                        <li><b>The only driver</b>: The temperature has been sampled in more than 90% of the realizations</li>
+                                        <li><b>Extremely important</b>: The temperature has been sampled in more than 75% of the realizations</li>
+                                        <li><b>Very important</b>: The temperature has been sampled in more than 50% of the realizations</li>
+                                        <li><b>Important</b>: The temperature has been sampled in more than 30% of the realizations</li>
+                                        <li><b>Less important</b>: The temperature has been sampled in more than 15% of the realizations</li>
+                                        <li><b>Not important</b>: The temperature has been sampled at least ones</li>
+                                        <li><b>Never used</b>: The temperature of the analogue has never been used within the 2000 realizations</li>
+                                    </ul>
+                                </span></span>
+                                <a class="reset"  href="javascript:jjaImportanceChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+
+                        <div class="dc-chart col-xs-6" id="analogue-djf-importance-chart">
+                            <div class="dc-chart-title">
+                                Importance of analogue DJF temperature
+                                <span class="info glyphicon glyphicon-info-sign"><span>
+                                    The importance of the analogue DJF temperature is classified based the percentage that the corresponding temperature has been chosen in a constrained Gibbs sampling with 2000 realizations and a temperature threshold of 5 °C. We define
+                                    <ul>
+                                        <li><b>The only driver</b>: The temperature has been sampled in more than 90% of the realizations</li>
+                                        <li><b>Extremely important</b>: The temperature has been sampled in more than 75% of the realizations</li>
+                                        <li><b>Very important</b>: The temperature has been sampled in more than 50% of the realizations</li>
+                                        <li><b>Important</b>: The temperature has been sampled in more than 30% of the realizations</li>
+                                        <li><b>Less important</b>: The temperature has been sampled in more than 15% of the realizations</li>
+                                        <li><b>Not important</b>: The temperature has been sampled at least ones</li>
+                                        <li><b>Never used</b>: The temperature of the analogue has never been used within the 2000 realizations</li>
+                                    </ul>
+                                </span></span>
+                                <a class="reset"  href="javascript:djfImportanceChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+                            </div>
+                        </div>
+
+                    </div>
+
                     <div class="row">
 
                         <div class="dc-chart col-xs-3" id="origin-chart">
