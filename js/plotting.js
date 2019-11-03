@@ -654,6 +654,10 @@ function plotPollenDiagram(data, elemId, groupByName="consol_name") {
         if (maxX[key] < 1.0) {
             exclude.push(key);
         } else {
+            // limit aquatics to 50%
+            if (maxX[key] > 50 && counts[key].group.includes("AQUA")) {
+                maxX[key] = 50;
+            }
             maxX[key] = Math.round(Math.max(20., maxX[key]));
             maxX[key] += (5 - (maxX[key] % 5)) % 5;
             totalX += maxX[key];
