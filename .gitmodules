@@ -1,3 +1,4 @@
 [submodule "data"]
 	path = data
-	url = https://github.com/Chilipp/POLNET-data.git
+	branch = zombie
+	url = git@github.com:/Chilipp/POLNET-data.git
